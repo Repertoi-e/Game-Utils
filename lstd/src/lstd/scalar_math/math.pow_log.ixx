@@ -1,12 +1,40 @@
+module;
+
+#include "../internal/floating_point.h"
+#include "../types/numeric_info.h"
+
+export module math.pow_log;
 
 //
 // Cephes Math Library Release 2.8: June, 2000
 // Copyright 1985, 1995, 2000 by Stephen L. Moshier
 //
 
+import math.basic;
+import math.frexp_ldexp;
+import math.poleval;
+import math.constants;
+
 LSTD_BEGIN_NAMESPACE
 
-namespace scalar_math_internal {
+export {
+    constexpr f64 pow(f64 a, f64 x);                                   // Returns a ** x
+    constexpr f64 pow(f64 a, types::is_integral auto x) { return 0; }  // Returns a ** x (where x is an integer)
+    constexpr f64 exp(f64 x) { return 0; }                             // Returns e ** x
+    constexpr f64 exp(types::is_integral auto x);                      // Returns e ** x (where x is an integer)
+    constexpr f64 sqrt(f64 x) { return 0; }                            // Returns the square root of x
+    constexpr f64 ln(f64 x) { return 0; }                              // Returns the natural logarithm (log_e)  of x
+    constexpr f64 log2(f64 x) { return 0; }                            // Returns the log_2 of x
+    constexpr f64 log10(f64 x) { return 0; }                           // Returns the log_10 of x
+
+    always_inline constexpr f32 pow(f32 a, f32 x) { return (f32) pow((f64) a, (f64) x); }
+    always_inline constexpr f32 pow(f32 a, types::is_integral auto x) { return (f32) pow((f64) a, x); }
+    always_inline constexpr f32 exp(f32 x) { return (f32) exp((f64) x); }
+    always_inline constexpr f32 exp(types::is_integral auto x) { return (f32) exp(x); }
+    always_inline constexpr f32 sqrt(f32 x) { return (f32) sqrt((f64) x); }
+    always_inline constexpr f32 log2(f32 x) { return (f32) log2((f64) x); }
+    always_inline constexpr f32 log10(f32 x) { return (f32) log10((f64) x); }
+}
 
 constexpr f64 P[] = {
     4.97778295871696307983711449197E-1,
@@ -55,9 +83,7 @@ constexpr f64 R[] = {
     2.40226506959099778137911584963E-1,
     6.93147180559945286226763982995E-1};
 
-}  // namespace scalar_math_internal
-
-constexpr f64 pow(f64 x, f64 y) {
+export constexpr f64 pow(f64 x, f64 y) {
     // Find a multiple of 1/16 that is within 1/16 of x
     auto reduce = [](f64 x) -> f64 {
         f64 t = load_exponent(x, 4);
@@ -180,10 +206,10 @@ constexpr f64 pow(f64 x, f64 y) {
 
         // Find significand of x in antilog table A[]
         s32 i = 1;
-        if (x <= scalar_math_internal::A[9]) i = 9;
-        if (x <= scalar_math_internal::A[i + 4]) i += 4;
-        if (x <= scalar_math_internal::A[i + 2]) i += 2;
-        if (x >= scalar_math_internal::A[1]) i = -1;
+        if (x <= A[9]) i = 9;
+        if (x <= A[i + 4]) i += 4;
+        if (x <= A[i + 2]) i += 2;
+        if (x >= A[1]) i = -1;
         i += 1;
 
         // Find (x - A[i])/A[i]
@@ -192,16 +218,16 @@ constexpr f64 pow(f64 x, f64 y) {
         // log(x) = log( a x/a ) = log(a) + log(x/a)
         //
         // log(x/a) = log(1+v),  v = x/a - 1 = (x-a)/a
-        x -= scalar_math_internal::A[i];
-        x -= scalar_math_internal::B[i / 2];
-        x /= scalar_math_internal::A[i];
+        x -= A[i];
+        x -= B[i / 2];
+        x /= A[i];
 
         // Rational approximation for log(1+v):
         //
         // log(1+v)  =  v  -  v**2/2  +  v**3 P(v) / Q(v)
         //
         z = x * x;
-        w = x * (z * scalar_math_internal::poleval<3>(x, scalar_math_internal::P) / scalar_math_internal::poleval_1<4>(x, scalar_math_internal::Q));
+        w = x * (z * poleval<3>(x, P) / poleval_1<4>(x, Q));
 
         w = w - load_exponent(z, -1);  // w - 0.5 * z
 
@@ -263,7 +289,7 @@ constexpr f64 pow(f64 x, f64 y) {
         //
         // Compute base 2 exponential of Hb,
         // where -0.0625 <= Hb <= 0.
-        z = Hb * scalar_math_internal::poleval<6>(Hb, scalar_math_internal::R);  // z  =  2**Hb - 1
+        z = Hb * poleval<6>(Hb, R);  // z  =  2**Hb - 1
 
         // Express e/16 as an integer plus a negative number of 16ths.
         // Find lookup table entry for the fractional power of 2.
@@ -272,7 +298,7 @@ constexpr f64 pow(f64 x, f64 y) {
 
         i = e / 16 + i;
         e = 16 * i - e;
-        w = scalar_math_internal::A[e];
+        w = A[e];
 
         z = w + w * z;            //    2**-e * ( 1 + (2**Hb-1) )
         z = load_exponent(z, i);  // Multiply by integer power of 2
@@ -288,5 +314,4 @@ constexpr f64 pow(f64 x, f64 y) {
     }
     return z;
 }
-
 LSTD_END_NAMESPACE

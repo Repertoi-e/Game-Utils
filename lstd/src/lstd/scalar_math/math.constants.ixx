@@ -1,6 +1,8 @@
-#pragma once
+module;
 
 #include "../internal/floating_point.h"
+
+export module math.constants;
 
 LSTD_BEGIN_NAMESPACE
 

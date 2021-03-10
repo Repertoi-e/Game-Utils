@@ -14,7 +14,7 @@ LSTD_BEGIN_NAMESPACE
 // You can read the comments in this file (around where DEBUG_MEMORY is mentioned)
 // and see what extra safety stuff we do.
 
-#if not defined NDEBUG 
+#if not defined NDEBUG
 #if !defined DEBUG_MEMORY && !defined FORCE_NO_DEBUG_MEMORY
 #define DEBUG_MEMORY 1
 #endif
@@ -186,24 +186,10 @@ struct allocation_header {
 };
 
 // Calculates the required padding in bytes which needs to be added to _ptr_ in order to be aligned
-inline u16 calculate_padding_for_pointer(void *ptr, s32 alignment) {
-    assert(alignment > 0 && is_pow_of_2(alignment));
-    return (u16)((((u64) ptr + (alignment - 1)) & -alignment) - (u64) ptr);
-}
+u16 calculate_padding_for_pointer(void *ptr, s32 alignment);
 
 // Like calculate_padding_for_pointer but padding must be at least the header size
-inline u16 calculate_padding_for_pointer_with_header(void *ptr, s32 alignment, u32 headerSize) {
-    u16 padding = calculate_padding_for_pointer(ptr, alignment);
-    if (padding < headerSize) {
-        headerSize -= padding;
-        if (headerSize % alignment) {
-            padding += alignment * (1 + (headerSize / alignment));
-        } else {
-            padding += alignment * (headerSize / alignment);
-        }
-    }
-    return padding;
-}
+u16 calculate_padding_for_pointer_with_header(void *ptr, s32 alignment, u32 headerSize);
 
 // #if'd so programs don't compile when debug info shouldn't be used.
 #if defined DEBUG_MEMORY

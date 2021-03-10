@@ -168,7 +168,7 @@ void reserve(T &table, s64 target, u32 alignment = 0) {
     using V = value_t<T>;
 
     if (table.SlotsFilled + target < table.Allocated) return;
-    target = max<s64>(ceil_pow_of_2(target + table.SlotsFilled + 1), table.MINIMUM_SIZE);
+    target = max(ceil_pow_of_2(target + table.SlotsFilled + 1), table.MINIMUM_SIZE);
 
     auto allocateNewBlock = [&]() {
         if constexpr (table.BLOCK_ALLOC) {

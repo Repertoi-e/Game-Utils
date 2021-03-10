@@ -64,7 +64,7 @@ void reserve(T &buffer, s64 targetCount) {
     if (targetCount < sizeof(buffer.StackData)) return;
     if (buffer.Count + targetCount < buffer.Allocated) return;
 
-    targetCount = max<s64>(ceil_pow_of_2(targetCount + buffer.Count + 1), 8);
+    targetCount = max(ceil_pow_of_2(targetCount + buffer.Count + 1), 8);
 
     if (buffer.Allocated) {
         buffer.Data = reallocate_array(buffer.Data, targetCount);

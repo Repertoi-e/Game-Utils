@@ -1,3 +1,10 @@
+module;
+
+#include "../internal/floating_point.h"
+#include "../types/numeric_info.h"
+
+export module math.sin_cos;
+
 /* 
 * SIN, DESCRIPTION:
 *
@@ -57,9 +64,12 @@
 // Copyright 1985, 1995, 2000 by Stephen L. Moshier
 //
 
-LSTD_BEGIN_NAMESPACE
+import math.basic;
+import math.frexp_ldexp;
+import math.poleval;
+import math.constants;
 
-namespace scalar_math_internal {
+LSTD_BEGIN_NAMESPACE
 
 constexpr f64 SIN_COEF[] =
     {1.58962301576546568060e-10,
@@ -152,23 +162,32 @@ always_inline constexpr f64 sin_or_cos(f64 x) {
     f64 zz = z * z;
     if ((j == 1) || (j == 2)) {
         if constexpr (Sin) {
-            y = 1.0 - load_exponent(zz, -1) + zz * zz * scalar_math_internal::poleval<5>(zz, COS_COEF);
+            y = 1.0 - load_exponent(zz, -1) + zz * zz * poleval<5>(zz, COS_COEF);
         } else {
-            y = z + z * (zz * scalar_math_internal::poleval<5>(zz, SIN_COEF));
+            y = z + z * (zz * poleval<5>(zz, SIN_COEF));
         }
     } else {
         if constexpr (Sin) {
-            y = z + z * (zz * scalar_math_internal::poleval<5>(zz, SIN_COEF));
+            y = z + z * (zz * poleval<5>(zz, SIN_COEF));
         } else {
-            y = 1.0 - load_exponent(zz, -1) + zz * zz * scalar_math_internal::poleval<5>(zz, COS_COEF);
+            y = 1.0 - load_exponent(zz, -1) + zz * zz * poleval<5>(zz, COS_COEF);
         }
     }
 
     return y * sign;
 }
-}  // namespace scalar_math_internal
 
-constexpr f64 sin(f64 x) { return scalar_math_internal::sin_or_cos<true>(x); }
-constexpr f64 cos(f64 x) { return scalar_math_internal::sin_or_cos<false>(x); }
+export {
+    constexpr f64 sin(f64 x) { return sin_or_cos<true>(x); }
+    constexpr f64 cos(f64 x) { return sin_or_cos<false>(x); }
+
+    constexpr f64 asin(f64 x) { return 0; }
+    constexpr f64 acos(f64 x) { return 0; }
+
+    always_inline constexpr f32 sin(f32 x) { return (f32) sin((f64) x); }
+    always_inline constexpr f32 cos(f32 x) { return (f32) cos((f64) x); }
+    always_inline constexpr f32 asin(f32 x) { return (f32) asin((f64) x); }
+    always_inline constexpr f32 acos(f32 x) { return (f32) acos((f64) x); }
+}
 
 LSTD_END_NAMESPACE

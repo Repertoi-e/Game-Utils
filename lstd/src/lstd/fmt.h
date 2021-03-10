@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../io.h"
-#include "../math.h"
-#include "../memory/guid.h"
-#include "../memory/string_builder.h"
+#include "io.h"
+#include "math.h"
+#include "memory/guid.h"
+#include "memory/string_builder.h"
 
 //
 // This file includes useful formatters for some complex types:

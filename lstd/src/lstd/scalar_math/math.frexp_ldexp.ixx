@@ -1,3 +1,10 @@
+module;
+
+#include "../internal/floating_point.h"
+#include "../types/numeric_info.h"
+
+export module math.frexp_ldexp;
+
 /* Based on a version which carries the following copyright:  
  * https://github.com/lattera/glibc/blob/895ef79e04a953cac1493863bcae29ad85657ee1/sysdeps/ieee754/dbl-64/wordsize-64/s_scalbn.c
  */
@@ -13,9 +20,27 @@
  * ====================================================
  */
 
+import math.basic;
+import math.constants;
+
 LSTD_BEGIN_NAMESPACE
 
-constexpr decompose_float_result fraction_exponent(f64 x) {
+// Decomposes given floating point value into a normalized fraction
+// and an integral power of two such that x = _Fraction_ * 2 ** _Exponent_.
+// _Fraction_ is in the range (-1; -0.5] or [0.5; 1).
+//
+// If the arg was 0, both returned values are 0.
+// If the arg was not finite, it is returned in _Fraction_ and _Exponent_ is unspecified.
+struct decompose_float_result {
+    f64 Fraction;
+    s32 Exponent;
+};
+
+// (frexp) The inverse of load_exponent.
+// Decomposes a float into a fraction and an exponent. See note above _decompose_float_result_.
+//
+// These two functions are used to modify floats without messing with the bits.
+export constexpr decompose_float_result fraction_exponent(f64 x) {
     ieee754_f64 u = {x};
 
     s32 ex = u.ieee.E;
@@ -37,12 +62,14 @@ constexpr decompose_float_result fraction_exponent(f64 x) {
     return {u.F, e};
 }
 
-namespace scalar_math_internal {
 constexpr f64 TWO54 = 1.80143985094819840000e+16;   // 0x43500000, 0x00000000
 constexpr f64 TWOM54 = 5.55111512312578270212e-17;  // 0x3C900000, 0x00000000
-}  // namespace scalar_math_internal
 
-constexpr f64 load_exponent(f64 x, s32 n) {
+// (ldexp) The reverse of _fraction_exponent_.
+// Multiplies x by 2 to the power of _exp_.
+//
+// These two functions are used to modify floats without messing with the bits.
+export constexpr f64 load_exponent(f64 x, s32 n) {
     ieee754_f64 u = {x};
 
     s64 k = u.ieee.E;
@@ -50,7 +77,7 @@ constexpr f64 load_exponent(f64 x, s32 n) {
         // 0 or subnormal
         if (u.ieee.M0 == 0 && u.ieee.M1 == 0) return x;  // +- 0
 
-        u.F *= scalar_math_internal ::TWO54;
+        u.F *= TWO54;
         k = u.ieee.E - 54;
     }
 
@@ -80,7 +107,7 @@ constexpr f64 load_exponent(f64 x, s32 n) {
         // Subnormal result
         k += 54;
         u.ieee.E = k;
-        return u.F * scalar_math_internal::TWOM54;
+        return u.F * TWOM54;
     }
 }
 

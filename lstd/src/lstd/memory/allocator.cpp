@@ -5,6 +5,7 @@
 #include "../math.h"
 #include "../os.h"
 
+import math;
 import path;
 import fmt;
 
@@ -210,6 +211,26 @@ void DEBUG_memory_info::maybe_verify_heap() {
     }
 }
 #endif
+
+// Calculates the required padding in bytes which needs to be added to _ptr_ in order to be aligned
+u16 calculate_padding_for_pointer(void *ptr, s32 alignment) {
+    assert(alignment > 0 && is_pow_of_2(alignment));
+    return (u16)((((u64) ptr + (alignment - 1)) & -alignment) - (u64) ptr);
+}
+
+// Like calculate_padding_for_pointer but padding must be at least the header size
+u16 calculate_padding_for_pointer_with_header(void *ptr, s32 alignment, u32 headerSize) {
+    u16 padding = calculate_padding_for_pointer(ptr, alignment);
+    if (padding < headerSize) {
+        headerSize -= padding;
+        if (headerSize % alignment) {
+            padding += alignment * (1 + (headerSize / alignment));
+        } else {
+            padding += alignment * (headerSize / alignment);
+        }
+    }
+    return padding;
+}
 
 file_scope void *encode_header(void *p, s64 userSize, u32 align, allocator alloc, u64 flags) {
     u32 padding = calculate_padding_for_pointer_with_header(p, align, sizeof(allocation_header));

@@ -801,6 +801,6 @@ TEST(cross_nd) {
     vecf<4> c4(3, 6, 4, -9);
     vecf<4> r4 = cross(a4, b4, c4);
 
-    auto d = abs(dot(a4, r4)) + abs(dot(b4, r4)) + abs(dot(c4, r4));
+    auto d = lstd::abs(dot(a4, r4)) + lstd::abs(dot(b4, r4)) + lstd::abs(dot(c4, r4));
     assert_lt(d, 1e-5f);
 }

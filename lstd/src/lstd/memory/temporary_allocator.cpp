@@ -30,7 +30,7 @@ void *temporary_allocator(allocator_mode mode, void *context, s64 size, void *ol
 
                 // Random log-based growth thing I came up at the time, not real science.
                 s64 loggedSize = (s64) ceil(p->Allocated * (log2(p->Allocated * 10.0) / 3));
-                s64 reserveTarget = (max<s64>(ceil_pow_of_2(size * 2), ceil_pow_of_2(loggedSize)) + 8_KiB - 1) & -8_KiB;
+                s64 reserveTarget = (max(ceil_pow_of_2(size * 2), ceil_pow_of_2(loggedSize)) + 8_KiB - 1) & -8_KiB;
 
                 p->Next->Storage = allocate_array<byte>(reserveTarget, {.Alloc = DefaultAlloc});
                 p->Next->Allocated = reserveTarget;

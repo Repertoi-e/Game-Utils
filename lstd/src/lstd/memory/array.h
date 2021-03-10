@@ -97,7 +97,7 @@ template <typename T>
 void reserve(array<T> &arr, s64 targetCount, u32 alignment = 0) {
     if (arr.Count + targetCount < arr.Allocated) return;
 
-    targetCount = max<s64>(ceil_pow_of_2(targetCount + arr.Count + 1), 8);
+    targetCount = max(ceil_pow_of_2(targetCount + arr.Count + 1), 8);
 
     if (arr.Allocated) {
         auto oldAlignment = ((allocation_header *) arr.Data - 1)->Alignment;

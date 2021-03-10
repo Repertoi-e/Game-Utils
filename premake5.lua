@@ -21,7 +21,7 @@ function common_settings()
     
     rtti "Off"
     editandcontinue "Off"
-    exceptionhandling "On"
+    exceptionhandling "Off" -- SEH still works
 	
 	-- Define this if you include headers from the normal standard library (STL).
 	-- If this macro is not defined we provide our own implementations of certain things 
@@ -35,7 +35,8 @@ function common_settings()
         
 		excludes "%{prj.name}/**/posix_*.cpp"
 
-        defines { "LSTD_NO_CRT", "NOMINMAX", "WIN32_LEAN_AND_MEAN" }
+		-- We need _CRT_SUPPRESS_RESTRICT for some dumb reason
+        defines { "LSTD_NO_CRT", "NOMINMAX", "WIN32_LEAN_AND_MEAN", "_CRT_SUPPRESS_RESTRICT" } 
     
 		buildoptions { "/Gs9999999" }
 		

@@ -1,17 +1,8 @@
 #include <lstd/types/type_info.h>
 
-#include <exception>
-#include <stdexcept>
-
 #include "test.h"
 
 void run_tests() {
-    try {
-        throw std::overflow_error("Oops?");
-    } catch (std::exception e) {
-        print("Exception: {}\n\n", e.what());
-    }
-
     print("\n");
     for (auto [fileName, tests] : g_TestTable) {
         print("{}:\n", *fileName);
