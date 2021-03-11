@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../memory/allocator.h"
 #include "../thread.h"
+
+import lstd.allocator;
 
 LSTD_BEGIN_NAMESPACE
 

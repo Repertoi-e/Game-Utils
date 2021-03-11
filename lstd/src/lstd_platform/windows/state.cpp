@@ -1,61 +1,10 @@
-#include "lstd/internal/common.h"
+#include "common.h"
 
 #if OS == WINDOWS
 
-#include "lstd/io.h"
-#include "lstd/memory/dynamic_library.h"
-#include "lstd/memory/guid.h"
-#include "lstd/os.h"
-#include "pch.h"
-
-import path;
-import fmt;
-
 LSTD_BEGIN_NAMESPACE
 
-extern "C" IMAGE_DOS_HEADER __ImageBase;
-#define MODULE_HANDLE ((HMODULE) &__ImageBase)
-
-struct win32_common_state {
-    utf16 *HelperClassName;
-
-    HWND HelperWindowHandle;
-    HDEVNOTIFY DeviceNotificationHandle;
-
-    static constexpr s64 CONSOLE_BUFFER_SIZE = 1_KiB;
-
-    byte CinBuffer[CONSOLE_BUFFER_SIZE];
-    byte CoutBuffer[CONSOLE_BUFFER_SIZE];
-    byte CerrBuffer[CONSOLE_BUFFER_SIZE];
-
-    HANDLE CinHandle, CoutHandle, CerrHandle;
-    thread::mutex CoutMutex, CinMutex;
-
-    array<delegate<void()>> ExitFunctions;  // Stores any functions to be called before the program terminates (naturally or by os_exit(exitCode))
-    thread::mutex ExitScheduleMutex;        // Used when modifying the ExitFunctions array
-
-    LARGE_INTEGER PerformanceFrequency;  // Used to time stuff
-
-    string ModuleName;  // Caches the module name (retrieve this with os_get_current_module())
-    string WorkingDir;  // Caches the working dir (query/modify this with os_get_working_dir(), os_set_working_dir())
-    thread::mutex WorkingDirMutex;
-
-    array<string> Argv;
-
-    string ClipboardString;
-};
-
-// We create a byte array which large enough to hold all global variables because
-// that avoids C++ constructors erasing the state we initialize before any C++ constructors are called.
-// Some further explanation... We need to initialize this before main is run. We need to initialize this
-// before even constructors for global variables (refered to as C++ constructors) are called (which may
-// rely on e.g. the Context being initialized). This is analogous to the stuff CRT runs before main is called.
-// Except that we don't link against the CRT (that's why we even have to "call" the constructors ourselves,
-// using linker magic - take a look at the exe_main.cpp in no_crt).
-file_scope byte State[sizeof(win32_common_state)];
-
-// Short-hand macro for sanity
-#define S ((win32_common_state *) &State[0])
+byte State[sizeof(win32_common_state)];
 
 // This zeroes out the global variables (stored in State) and initializes the mutexes
 void init_global_vars() {
@@ -194,27 +143,6 @@ __declspec(allocate(".CRT$XTU")) cb *g_Termination = NULL;
 #error @TODO: See how this works on other compilers!
 #endif
 */
-
-bool dynamic_library::load(const string &name) {
-    // @Bug value.Length is not enough (2 wide chars for one char)
-    auto *buffer = allocate_array<utf16>(name.Length + 1, {.Alloc = Context.Temp});
-    utf8_to_utf16(name.Data, name.Length, buffer);
-    Handle = (void *) LoadLibraryW(buffer);
-    return Handle;
-}
-
-void *dynamic_library::get_symbol(const string &name) {
-    auto *cString = to_c_string(name);
-    defer(free(cString));
-    return (void *) GetProcAddress((HMODULE) Handle, (LPCSTR) cString);
-}
-
-void dynamic_library::close() {
-    if (Handle) {
-        FreeLibrary((HMODULE) Handle);
-        Handle = null;
-    }
-}
 
 // This registeres a dummy window class which is used for some os_ functions
 file_scope void register_helper_window_class() {
@@ -375,50 +303,6 @@ bytes os_read_from_console() {
     DWORD read;
     ReadFile(S->CinHandle, S->CinBuffer, (DWORD) S->CONSOLE_BUFFER_SIZE, &read, null);
     return bytes(S->CinBuffer, (s64) read);
-}
-
-void console_writer::write(const byte *data, s64 size) {
-    thread::mutex *mutex = null;
-    if (LockMutex) mutex = &S->CoutMutex;
-    thread::scoped_lock _(mutex);
-
-    if (size > Available) {
-        flush();
-    }
-
-    copy_memory(Current, data, size);
-
-    Current += size;
-    Available -= size;
-}
-
-void console_writer::flush() {
-    thread::mutex *mutex = null;
-    if (LockMutex) mutex = &S->CoutMutex;
-    thread::scoped_lock _(mutex);
-
-    if (!Buffer) {
-        if (OutputType == console_writer::COUT) {
-            Buffer = Current = S->CoutBuffer;
-        } else {
-            Buffer = Current = S->CerrBuffer;
-        }
-
-        BufferSize = Available = S->CONSOLE_BUFFER_SIZE;
-    }
-
-    HANDLE target = OutputType == console_writer::COUT ? S->CoutHandle : S->CerrHandle;
-
-    DWORD ignored;
-    WriteFile(target, Buffer, (DWORD)(BufferSize - Available), &ignored, null);
-
-    Current = Buffer;
-    Available = S->CONSOLE_BUFFER_SIZE;
-}
-
-// This workaround is needed in order to prevent circular inclusion of context.h
-namespace internal {
-writer *g_ConsoleLog = &cout;
 }
 
 void *os_allocate_block(s64 size) {

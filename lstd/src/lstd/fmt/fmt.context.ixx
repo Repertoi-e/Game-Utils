@@ -1,6 +1,6 @@
 module;
 
-#include "../io.h"
+#include "../memory/string_builder.h"
 #include "../types/numeric_info.h"
 #include "format_float.inl"
 
@@ -9,6 +9,8 @@ export module fmt.context;
 import fmt.arg;
 import fmt.specs;
 import fmt.parse_context;
+
+import lstd.io;
 
 LSTD_BEGIN_NAMESPACE
 
@@ -642,42 +644,44 @@ void write_f64(fmt_context *f, f64 value, fmt_specs specs) {
 
     // @Locale The decimal point written in _internal::format_float_ should be locale-dependent.
     // Also if we decide to add a thousands separator we should do it inside _format_float_
-    stack_dynamic_buffer<512> formatBuffer;
+    string_builder formatBuffer;
     defer(free(formatBuffer));
 
     format_float(
         [](void *user, utf8 *buf, s64 length) {
-            auto *fb = (stack_dynamic_buffer<512> *) user;
-            fb->Count += length;
-            return (utf8 *) fb->Data + fb->Count;
+            auto *sb = (string_builder *) user;
+            sb->BaseBuffer.Occupied += length;
+            if (sb->BaseBuffer.Occupied > string_builder::BUFFER_SIZE) return (utf8 *) null;
+            return buf + length;
         },
-        &formatBuffer, (utf8 *) formatBuffer.Data, type, value, specs.Precision);
+        &formatBuffer, formatBuffer.BaseBuffer.Data, type, value, specs.Precision);
 
     // Note: We set _type_ to 'g' if it's zero, but here we check specs.Type (which we didn't modify)
     // This is because '0' is similar to 'g', except that it prints at least one digit after the decimal point,
     // which we do here (python-like formatting)
     if (!specs.Type) {
-        auto *p = formatBuffer.begin(), *end = formatBuffer.end();
+        auto *p = formatBuffer.BaseBuffer.Data;
+        auto *end = p + formatBuffer.BaseBuffer.Occupied;
         while (p < end && is_digit(*p)) ++p;
         if (p < end && to_lower(*p) != 'e') {
             ++p;
             if (*p == '0') ++p;
             while (p != end && *p >= '1' && *p <= '9') ++p;
 
-            byte *where = p;
+            utf8 *where = p;
             while (p != end && *p == '0') ++p;
 
             if (p == end || !is_digit(*p)) {
                 if (p != end) copy_memory(where, p, (s64)(end - p));
-                formatBuffer.Count -= (s64)(p - where);
+                formatBuffer.BaseBuffer.Occupied -= (s64)(p - where);
             }
         } else if (p == end) {
             // There was no dot at all
-            append_pointer_and_size(formatBuffer, (byte *) ".0", 2);
+            append_pointer_and_size(formatBuffer, ".0", 2);
         }
     }
 
-    if (percentage) append(formatBuffer, '%');
+    if (percentage) append_cp(formatBuffer, '%');
 
     if (specs.Align == fmt_alignment::NUMERIC) {
         if (sign) {
@@ -690,12 +694,12 @@ void write_f64(fmt_context *f, f64 value, fmt_specs specs) {
         specs.Align = fmt_alignment::RIGHT;
     }
 
-    auto formattedSize = formatBuffer.Count + (sign ? 1 : 0);
+    auto formattedSize = formatBuffer.BaseBuffer.Occupied + (sign ? 1 : 0);
     write_padded_helper(
         f, specs,
         [&]() {
             if (sign) write_no_specs(f, sign);
-            write_no_specs(f, (utf8 *) formatBuffer.Data, formatBuffer.Count);
+            write_no_specs(f, (utf8 *) formatBuffer.BaseBuffer.Data, formatBuffer.BaseBuffer.Occupied);
         },
         formattedSize);
 }

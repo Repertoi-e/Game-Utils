@@ -7,6 +7,8 @@
 #include "debug_break.h"
 #include "static_for.h"
 
+import math;
+
 LSTD_BEGIN_NAMESPACE
 
 // Use this to get the location where a function was called without using macros.
@@ -32,11 +34,12 @@ struct source_location {
     }
 };
 
+//
 // Convenience storage literal operators, allows for specifying sizes like this:
 //  s64 a = 10_MiB;
+//
 
-// _B For completeness
-constexpr u64 operator"" _B(u64 i) { return i; }
+constexpr u64 operator"" _B(u64 i) { return i; }  // _B For completeness
 constexpr u64 operator"" _KiB(u64 i) { return i << 10; }
 constexpr u64 operator"" _MiB(u64 i) { return i << 20; }
 constexpr u64 operator"" _GiB(u64 i) { return i << 30; }
@@ -45,7 +48,7 @@ constexpr u64 operator"" _thousand(u64 i) { return i * 1000; }
 constexpr u64 operator"" _million(u64 i) { return i * 1000000; }
 constexpr u64 operator"" _billion(u64 i) { return i * 1000000000; }
 
-// Helper macro for, e.g flag enums
+// Helper macro for flag enums
 //
 // enum flags {
 //	Flag_1 = BIT(0),
@@ -56,7 +59,7 @@ constexpr u64 operator"" _billion(u64 i) { return i * 1000000000; }
 //
 #define BIT(x) (1 << (x))
 
-// Used in macros to get "unique" variable names
+// There are helper macros used in other macros to get "unique" variable names (we just append the line number)
 #define LINE_NAME(name) _MACRO_CONCAT(name, __LINE__)
 #define _MACRO_DO_CONCAT(s1, s2) s1##s2
 #define _MACRO_CONCAT(s1, s2) _MACRO_DO_CONCAT(s1, s2)
@@ -143,49 +146,18 @@ constexpr auto enumerate_impl(T &&in) {
 //        other_data[it] = data[it] + 1;
 //    }
 //
-// Might not look much shorter but you don't a separate
-// variable if you use data[it] more than once.
-// It's just a convenience.
-//
 // You can change the names of the internal
 // variables by using _For_enumerate_as_.
 //
 #define For_enumerate_as(it_index, it, in) for (auto [it_index, it] : enumerate_impl(in))
 #define For_enumerate(in) For_enumerate_as(it_index, it, in)
 
-// Base classes to reduce boiler plate code
-struct non_copyable {
-   protected:
-    non_copyable() {}
-    ~non_copyable() {}
-
-   private:
-    non_copyable(const non_copyable &) = delete;
-    non_copyable &operator=(const non_copyable &) = delete;
-};
-
-struct non_movable {
-   protected:
-    non_movable() {}
-    ~non_movable() {}
-
-   private:
-    non_movable(non_movable &&) = delete;
-    non_movable &operator=(non_movable &&) = delete;
-};
-
-struct non_assignable {
-   private:
-    non_assignable &operator=(const non_assignable &) = delete;
-    non_assignable &operator=(non_assignable &&) = delete;
-};
-
 // Python-like range functionality
 // e.g.
 //
 //  for (auto it : range(20))        // [0, 20)
 //  for (auto it : range(3, 10, 2))  // every second integer (step 2) in [3, 10)
-//  for (auto it : range(10, 0, -1)) // reverse [10, 0)
+//  for (auto it : range(10, 0, -1)) // reverse from 10 to zero (exclusive)
 //
 // .. or with our For macro:
 //
@@ -194,6 +166,10 @@ struct non_assignable {
 //    which is equivalent to:
 //
 //  For_as(it, range(12)) {}
+//
+//    which is equivalent to:
+//
+//  for (int it = 0; it < 12; ++it) {}
 //
 struct range {
     struct iterator {
@@ -239,6 +215,32 @@ struct range {
     constexpr iterator end() const { return End; }
 };
 
+struct non_copyable {
+   protected:
+    non_copyable() {}
+    ~non_copyable() {}
+
+   private:
+    non_copyable(const non_copyable &) = delete;
+    non_copyable &operator=(const non_copyable &) = delete;
+};
+
+struct non_movable {
+   protected:
+    non_movable() {}
+    ~non_movable() {}
+
+   private:
+    non_movable(non_movable &&) = delete;
+    non_movable &operator=(non_movable &&) = delete;
+};
+
+struct non_assignable {
+   private:
+    non_assignable &operator=(const non_assignable &) = delete;
+    non_assignable &operator=(non_assignable &&) = delete;
+};
+
 // @Volatile: README.md
 // Type policy:
 //
@@ -259,12 +261,12 @@ struct range {
 //   _string_ is this library implemented the following way:
 //     _string_ is a struct that contains a pointer to a byte buffer and 2 fields containing pre-calculated
 //     utf8 code unit and code point lengths, as well as a field _Reserved_ that contains the number of
-//     bytes allocated by that string (default is 0).
+//     bytes allocated by that string (by default, that is 0).
 //
 //     _string_ contains constexpr methods which deal with string manipulation (all methods which make sense and don't modify the string can be used compile-time).
 //     This works because you can construct a string as a "view" with a c-style string literal.
-//     constexpr functions include substrings, trimming (these work because, again, we don't do zero terminated strings, but instead a pointer and a size), searching for
-//     strings or code points, etc. All operations are implemented with utf8 in mind.
+//     constexpr functions include substrings, trimming (these work because, again, we don't do zero terminated strings, but instead a pointer and a size),
+//     searching for strings or code points, etc. All operations are implemented with utf8 encoding in mind.
 //
 //     We implement string length methods and comparing (lexicographically and code point by code point) for c-style strings in "string_utils.h" (included by "string.h").
 //     These still work with utf8 in mind but assume the string is zero terminated.
@@ -285,21 +287,21 @@ struct range {
 //
 //            // _string_ includes constexpr methods but also methods which cannot be constexpr and allocate memory.
 //            // It's like a mixed type between std::string_view and std::string from the STL, but with way better design and API.
-//            // When a string needs to allocate memory it requests a buffer and copies the old contents of the string.
-//            path.append("output.txt");
+//            // When a string needs to allocate memory it allocates a buffer and copies the old contents of the string.
+//            path.append("output.txt"); // "./data/output.txt"
 //
 //            // This doesn't allocate memory but it points to the buffer in _path_.
 //            // The substring is valid as long as the original string is valid.
-//            string pathWithoutDot = path.substring(2, -1);
-//
+//            string pathWithoutDot = path.substring(2, path.Length); "data/output.txt"
+// 
 //            // Doesn't release the string here, but instead runs at scope exit.
 //            // It runs exactly like a destructor, but it's explicit and not hidden.
-//            // This style of programming makes you write code which doesn't allocate
+//            // This style of programming forces you to write code which doesn't allocate
 //            // strings superfluously and doesn't rely on C++ compiler optimization
 //            // (like "copy elision" when returning strings from functions).
+//            // You might argue the point of destructors is so the programmer doesn't have 
+//            // to think hard, but in these modern days we need fast programs, and RAII isn't fast.
 //            defer(path.release());
-//
-//     String methods which allocate memory copy the contents of the old pointer if the string is still a view (hasn't yet allocated memory).
 //
 //     _clone(T *dest, T src)_ is a global function that ensures a deep copy of the argument passed.
 //     Objects that own memory (like string) overload clone() and make sure the copy reserves a buffer and copies the data to it.

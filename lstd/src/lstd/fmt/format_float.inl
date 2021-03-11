@@ -316,6 +316,7 @@ file_scope void get_float_string_internal(utf8 **start, u32 *length, utf8 *out, 
     if (cl > lg) cl = lg;
 
 // Pass -1 for precision for default value
+// @Cleanup: This is ugly
 file_scope void format_float(format_float_callback_t callback, void *user, utf8 *buf, utf8 specType, f64 fv, s32 pr, bool commas = false) {
     assert(callback);
 

@@ -1,11 +1,12 @@
-#include "allocator.h"
+module;
 
 #include "../internal/context.h"
 #include "../io.h"
 #include "../math.h"
 #include "../os.h"
 
-import math;
+module lstd.allocator;
+
 import path;
 import fmt;
 

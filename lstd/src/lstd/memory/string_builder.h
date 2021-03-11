@@ -5,7 +5,9 @@
 
 LSTD_BEGIN_NAMESPACE
 
-// This is good for large strings because it doesn't have to constantly reallocate
+// This object is good for writing out large strings, because it doesn't have to constantly reallocate memory.
+// It starts with a large block on the stack, if it runs out of storage it allocates another block and forms a linked list.
+// To get the combined string in the end, call _combine(string_builder)_.
 struct string_builder {
     static constexpr s64 BUFFER_SIZE = 1_KiB;
 

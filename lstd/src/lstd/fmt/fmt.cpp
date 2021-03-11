@@ -1,4 +1,4 @@
-#include "fmt.h"
+#include "../fmt.h"
 
 LSTD_BEGIN_NAMESPACE
 
@@ -18,7 +18,7 @@ void fmt_default_parse_error_handler(const string &message, const string &format
     replace_all(str, '\t', "\\t");
     replace_all(str, '\v', "\\v");
 
-    string_builder_writer output;
+    string_writer output;
     fmt_to_writer(&output, "\n\n>>> {!GRAY}An error during formatting occured: {!YELLOW}{}{!GRAY}\n", message);
     fmt_to_writer(&output, "    ... the error happened here:\n");
     fmt_to_writer(&output, "        {!}{}{!GRAY}\n", str);

@@ -432,7 +432,7 @@ export {
     // Formats to a string. The caller is responsible for freeing.
     template <typename... Args>
     [[nodiscard("Leak")]] string sprint(const string &fmtString, Args &&...arguments) {
-        auto writer = string_builder_writer();
+        auto writer = string_writer();
         fmt_to_writer(&writer, fmtString, ((Args &&) arguments)...);
 
         string combined = combine(writer.Builder);

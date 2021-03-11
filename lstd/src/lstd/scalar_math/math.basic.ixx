@@ -9,7 +9,6 @@ import math.constants;
 
 LSTD_BEGIN_NAMESPACE
 
-
 export {
     constexpr bool sign_bit(types::is_signed_integral auto x) { return x < 0; }
     constexpr bool sign_bit(types::is_unsigned_integral auto) { return false; }

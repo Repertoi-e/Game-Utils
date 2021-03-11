@@ -63,7 +63,7 @@ void run_tests() {
 #define LOG_TO_FILE 0
 
 #if LOG_TO_FILE
-string_builder_writer logger;
+string_writer logger;
 void write_output_to_file() {
     Context.Log = &cout;
 

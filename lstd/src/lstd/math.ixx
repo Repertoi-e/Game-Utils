@@ -1,7 +1,5 @@
 export module math;
 
-export import math.constants;
-
 //
 // This file defines common functions that work on scalars (integrals or floating point types).
 //
@@ -114,6 +112,7 @@ export import math.constants;
 //
 
 export import math.basic;
+export import math.constants;
 export import math.pow_log;
 export import math.sin_cos;
 export import math.ceil_floor_round;
